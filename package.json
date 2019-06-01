@@ -1,0 +1,32 @@
+{
+  "name": "zeit-aurora-integration",
+  "version": "1.0.0",
+  "description": "Integration of AWS Aurora with Zeit Now",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/slothking-online/zeit-aurora-integration.git"
+  },
+  "keywords": [
+    "zeit",
+    "aurora",
+    "aws"
+  ],
+  "author": "Aexol <aexol@aexol.com> (http://aexol.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/slothking-online/zeit-aurora-integration/issues"
+  },
+  "homepage": "https://github.com/slothking-online/zeit-aurora-integration#readme",
+  "devDependencies": {
+    "@types/node": "^12.0.4",
+    "typescript": "^3.5.1"
+  },
+  "dependencies": {
+    "@zeit/integration-utils": "^0.6.1",
+    "node-fetch": "^2.6.0"
+  }
+}

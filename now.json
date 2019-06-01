@@ -1,0 +1,6 @@
+{
+  "name": "zeit-aws-aurora",
+  "version": 2,
+  "builds": [{ "src": "./src/index.ts", "use": "@now/node@canary" }],
+  "routes": [{ "src": "/", "dest": "/src/index.ts" }]
+}
