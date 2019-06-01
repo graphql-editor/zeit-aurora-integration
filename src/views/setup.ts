@@ -1,9 +1,10 @@
-import { ClientState, ViewInfo } from "../models";
+import { Actions } from "actions";
+import { MetadataZeit, SetupVariables, ViewInfo } from "../models";
 
-export const setupView = async (viewInfo: ViewInfo) => {
+export const setupView = async (viewInfo: ViewInfo, allowBack?: boolean) => {
   const { payload, metadata, zeitClient } = viewInfo;
   const error = undefined;
-  const { accessKey, region, secret } = payload.clientState as ClientState;
+  const setup: MetadataZeit["setup"] = metadata.setup || {};
   const awsAccountCreationLink = "https://aws.amazon.com/account/";
   return `
 		<Box>
@@ -20,21 +21,23 @@ export const setupView = async (viewInfo: ViewInfo) => {
 				<FsContent>
 					<FsTitle>Your AWS Access Key</FsTitle>
 					<FsSubtitle>This is your AWS main access key. Don't worry this integration will create its own policies and doesnt store it.</FsSubtitle>
-					<Input name="accessKey" value="${accessKey || ""}"/>
+					<Input name="${SetupVariables.awsAccessKeyId}" value="${setup!.awsAccessKeyId ||
+    ""}"/>
 				</FsContent>
 			</Fieldset>
 			<Fieldset>
 				<FsContent>
 					<FsTitle>Your AWS Secret Key</FsTitle>
 					<FsSubtitle>This is your AWS main secret key. Don't worry this integration will create its own policies and doesnt store it.</FsSubtitle>
-					<Input name="secret" value="${secret || ""}"/>
+					<Input name="${SetupVariables.awsSecretAccessKey}" value="${setup!
+    .awsSecretAccessKey || ""}"/>
 				</FsContent>
 			</Fieldset>
 			<Fieldset>
 				<FsContent>
 					<FsTitle>Your AWS Region</FsTitle>
 					<FsSubtitle>Aurora http api region( now only available in us-east-1</FsSubtitle>
-					<Input name="region" value="${region || "us-east-1"}"/>
+					<Input name="${SetupVariables.region}" value="${setup!.region || "us-east-1"}"/>
 				</FsContent>
 			</Fieldset>
 			${
@@ -44,7 +47,12 @@ export const setupView = async (viewInfo: ViewInfo) => {
 			`
           : ""
       }
-			<Button action="setup">Setup</Button>
+      ${
+        allowBack
+          ? `<Button action="${Actions.dashobardView}">Back</Button>`
+          : ""
+      }
+			<Button action="${Actions.setup}">Setup</Button>
 		</Box>
 	`;
 };
