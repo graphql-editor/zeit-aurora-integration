@@ -1,4 +1,4 @@
-import AWSSDK, { RDSDataService, SecretsManager } from "aws-sdk";
+import AWSSDK from "aws-sdk";
 import uuid from "uuid";
 import { ClusterConfig, NewClusterConfig } from "../models";
 
@@ -21,8 +21,34 @@ interface CreateClusterPayload {
   clusterEndpoint: string;
 }
 
+interface CreateIAMPayload {
+  awsAccessKeyId: string;
+  awsSecretAccessKey: string;
+}
+
 interface CreateSecretPayload {
   secretArn: string;
+}
+
+export interface ClusterConfig {
+  engine?: string;
+  engineMode?: string;
+  region?: string;
+  clusterName?: string;
+}
+
+export interface RemoveClusterConfig {
+  region?: string;
+  finalSnapshot?: boolean;
+  clusterName: string;
+}
+
+export interface NewClusterConfig {
+  awsAccessKeyId: string;
+  awsSecretAccessKey: string;
+  clusterName: string;
+  secretArn: string;
+  region: string;
 }
 
 export interface AWS {
@@ -32,6 +58,10 @@ export interface AWS {
 
 function randomZeitClusterName(): string {
   return "zeit-" + uuid.v4();
+}
+
+function secretName(clusterName: string): string {
+  return clusterName + "-secret";
 }
 
 function generatePassword() {
@@ -89,16 +119,107 @@ export default class AwsClient {
     throw new Error("timed out");
   }
 
-  public createCluster(
-    cfg: InternalClusterConfig,
-  ): Promise<CreateClusterPayload> {
-    const rds = this.awsSdk
+  public async prepareCluster(cfg?: ClusterConfig) {
+    const {
+      engine = "aurora",
+      region = "us-east-1",
+      engineMode = "serverless",
+      clusterName = randomZeitClusterName(),
+    } = cfg ? cfg : {};
+    const user = "zeit";
+    const password = generatePassword();
+    const clusterCfg = {
+      clusterName,
+      engine,
+      engineMode,
+      password,
+      region,
+      user,
+    };
+    const clusterPayload = await this.createCluster(clusterCfg);
+    const secretPayload = await this.createSecret(clusterCfg, clusterPayload);
+    const createIAMPayload = await this.createIAM(
+      clusterCfg,
+      clusterPayload,
+      secretPayload,
+    );
+    const awsAccessKeyId = createIAMPayload.awsAccessKeyId
+      ? createIAMPayload.awsAccessKeyId
+      : this.cfg.awsAccessKeyId;
+    const awsSecretAccessKey = createIAMPayload.awsSecretAccessKey
+      ? createIAMPayload.awsSecretAccessKey
+      : this.cfg.awsSecretAccessKey;
+    return {
+      awsAccessKeyId,
+      awsSecretAccessKey,
+      clusterName,
+      region,
+      secretArn: secretPayload.secretArn,
+    };
+  }
+
+  public removeCluster(cfg: RemoveClusterConfig) {
+    const { region = "us-east-1", finalSnapshot = false, clusterName } = cfg;
+    const deleteClusterParams: AWSSDK.RDS.DeleteDBClusterMessage = {
+      DBClusterIdentifier: clusterName,
+      SkipFinalSnapshot: !finalSnapshot,
+    };
+    if (!deleteClusterParams.SkipFinalSnapshot) {
+      deleteClusterParams.FinalDBSnapshotIdentifier =
+        "snapshot-" + uuid.v4() + "-cluster-" + clusterName;
+    }
+    const deleteSecretParams: AWSSDK.SecretsManager.DeleteSecretRequest = {
+      RecoveryWindowInDays: 7,
+      SecretId: secretName(clusterName),
+    };
+    const rds = this.rds(region);
+    const secretsManager = this.secretsManager(region);
+    return new Promise((resolved, rejected) => {
+      rds.deleteDBCluster(deleteClusterParams, (err) => {
+        if (err) {
+          rejected(err);
+          return;
+        }
+        resolved("cluster " + clusterName + " deleted");
+      });
+    }).then(
+      (v) =>
+        new Promise((resolved, rejected) => {
+          secretsManager.deleteSecret(deleteSecretParams, (err) => {
+            if (err) {
+              rejected(err);
+              return;
+            }
+            resolved(v);
+          });
+        }),
+    );
+  }
+
+  private rds(region: string): AWSSDK.RDS {
+    return this.awsSdk
       ? this.awsSdk.RDS
       : new AWSSDK.RDS({
           accessKeyId: this.cfg.awsAccessKeyId,
-          region: cfg.region,
+          region,
           secretAccessKey: this.cfg.awsSecretAccessKey,
         });
+  }
+
+  private secretsManager(region: string): AWSSDK.SecretsManager {
+    return this.awsSdk
+      ? this.awsSdk.SecretsManager
+      : new AWSSDK.SecretsManager({
+          accessKeyId: this.cfg.awsAccessKeyId,
+          region,
+          secretAccessKey: this.cfg.awsSecretAccessKey,
+        });
+  }
+
+  private createCluster(
+    cfg: InternalClusterConfig,
+  ): Promise<CreateClusterPayload> {
+    const rds = this.rds(cfg.region);
     return new Promise((resolved, rejected) => {
       rds.createDBCluster(
         {
@@ -154,21 +275,15 @@ export default class AwsClient {
       );
   }
 
-  public createSecret(
+  private createSecret(
     cfg: InternalClusterConfig,
     clusterPayload: CreateClusterPayload,
   ): Promise<CreateSecretPayload> {
-    const secretsManager = this.awsSdk
-      ? this.awsSdk.SecretsManager
-      : new AWSSDK.SecretsManager({
-          accessKeyId: this.cfg.awsAccessKeyId,
-          region: cfg.region,
-          secretAccessKey: this.cfg.awsSecretAccessKey,
-        });
+    const secretsManager = this.secretsManager(cfg.region);
     return new Promise((resolved, rejected) => {
       secretsManager.createSecret(
         {
-          Name: cfg.clusterName + "-secret",
+          Name: secretName(cfg.clusterName),
           SecretString: JSON.stringify({
             dbClusterIdentifier: cfg.clusterName,
             engine: "mysql",
@@ -190,31 +305,18 @@ export default class AwsClient {
     });
   }
 
-  public async prepareCluster(cfg?: ClusterConfig): Promise<NewClusterConfig> {
-    const {
-      engine = "aurora",
-      region = "us-east-1",
-      engineMode = "serverless",
-      clusterName = randomZeitClusterName(),
-    } = cfg ? cfg : {};
-    const user = "zeit";
-    const password = generatePassword();
-    const clusterCfg = {
-      clusterName,
-      engine,
-      engineMode,
-      password,
-      region,
-      user,
-    };
-    const clusterPayload = await this.createCluster(clusterCfg);
-    const secretPayload = await this.createSecret(clusterCfg, clusterPayload);
-    return {
-      awsAccessKeyId: this.cfg.awsAccessKeyId,
-      awsSecretAccessKey: this.cfg.awsSecretAccessKey,
-      clusterName,
-      region,
-      secretArn: secretPayload.secretArn,
-    };
+  private createIAM(
+    cfg: ClusterConfig,
+    clusterPayload: CreateClusterPayload,
+    secretPayload: CreateSecretPayload,
+  ): Promise<CreateIAMPayload> {
+    // TODO: For each deployment create IAM service user with restricted ACL
+    // user should only be allowed to access secrets
+    return new Promise((resolved) => {
+      resolved({
+        awsAccessKeyId: "",
+        awsSecretAccessKey: "",
+      });
+    });
   }
 }
