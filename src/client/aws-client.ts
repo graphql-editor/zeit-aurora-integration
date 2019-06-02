@@ -17,6 +17,7 @@ interface InternalClusterConfig {
 }
 
 interface CreateClusterPayload {
+  clusterArn: string;
   clusterName: string;
   clusterEndpoint: string;
 }
@@ -49,6 +50,7 @@ export interface NewClusterConfig {
   clusterName: string;
   secretArn: string;
   region: string;
+  clusterArn: string;
 }
 
 export interface AWS {
@@ -81,7 +83,7 @@ export default class AwsClient {
     this.awsSdk = awsSdk;
   }
 
-  public async waitFor(rds: AWS.RDS, payload: CreateClusterPayload) {
+  private async waitFor(rds: AWS.RDS, payload: CreateClusterPayload) {
     for (let i = 0; i < 30; i++) {
       try {
         await new Promise((resolved, rejected) => {
@@ -141,7 +143,7 @@ export default class AwsClient {
     const createIAMPayload = await this.createIAM(clusterCfg, clusterPayload, secretPayload);
     const awsAccessKeyId = createIAMPayload.awsAccessKeyId ? createIAMPayload.awsAccessKeyId : this.cfg.awsAccessKeyId;
     const awsSecretAccessKey = createIAMPayload.awsSecretAccessKey ? createIAMPayload.awsSecretAccessKey : this.cfg.awsSecretAccessKey;
-    return { awsAccessKeyId, awsSecretAccessKey, clusterName, region, secretArn: secretPayload.secretArn };
+    return { awsAccessKeyId, awsSecretAccessKey, clusterArn: clusterPayload.clusterArn, clusterName, region, secretArn: secretPayload.secretArn };
   }
 
   public removeCluster(cfg: RemoveClusterConfig) {
@@ -220,8 +222,9 @@ export default class AwsClient {
             rejected(err);
             return;
           }
-          const dbcluster = data.DBCluster as { Endpoint: string };
+          const dbcluster = data.DBCluster as { DBClusterArn: string, Endpoint: string };
           resolved({
+            clusterArn: dbcluster.DBClusterArn,
             clusterEndpoint: dbcluster.Endpoint,
             clusterName: cfg.clusterName,
           });
