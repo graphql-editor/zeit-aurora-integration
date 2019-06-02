@@ -1,6 +1,6 @@
 import { HandlerOptions, withUiHook } from "@zeit/integration-utils";
-import { Actions } from "actions";
-import { sureDeleteView } from "views/sureDelete";
+import { Actions } from "./actions";
+import AwsClient from "./client/aws-client";
 import {
   ClientStateSetup,
   MetadataZeit,
@@ -8,6 +8,7 @@ import {
   ViewInfo,
 } from "./models";
 import { dashboardView, detailsView, setupView } from "./views";
+import { sureDeleteView } from "./views/sureDelete";
 
 async function getContent(options: HandlerOptions) {
   const { payload, zeitClient } = options;
@@ -29,17 +30,20 @@ async function getContent(options: HandlerOptions) {
     };
     await zeitClient.setMetadata(metadata);
   }
+  if (!metadata.setup || action === Actions.setupView) {
+    return setupView(viewInfo, !!metadata.setup);
+  }
   if (action === Actions.addCluster) {
     // Call AWS add cluster
-    const clusterName = "movie database";
-    metadata.clusters = metadata.clusters || [];
-    metadata.clusters.push({
+    const awsClient = new AwsClient({
       ...metadata.setup!,
-      clusterName,
-      secretArn: "adada",
     });
+    console.log(awsClient);
+    const cluster = await awsClient.prepareCluster();
+    metadata.clusters = metadata.clusters || [];
+    metadata.clusters.push(cluster);
     metadata.projectsConnected = metadata.projectsConnected || {};
-    metadata.projectsConnected[clusterName] = [];
+    metadata.projectsConnected[cluster.clusterName] = [];
     await zeitClient.setMetadata(metadata);
   }
   if (action.startsWith(Actions.removeCluster)) {
@@ -59,6 +63,12 @@ async function getContent(options: HandlerOptions) {
     const clusterName = action.split("/")[1];
     return detailsView(viewInfo, clusterName);
   }
+  if (action.startsWith(Actions.disconnectCluster)) {
+    const clusterName = action.split("/")[1];
+    const projectId = payload.projectId;
+    metadata.projectsConnected![clusterName] = [];
+    await zeitClient.setMetadata(metadata);
+  }
   if (action.startsWith(Actions.connectCluster)) {
     const clusterName = action.split("/")[1];
     const projectId = payload.projectId;
@@ -67,37 +77,66 @@ async function getContent(options: HandlerOptions) {
       const connectingToCluster = metadata.clusters!.find(
         (c) => c.clusterName === clusterName,
       )!;
-      const secretNameSecret = await zeitClient.ensureSecret(
-        "aws-secret-access-key",
-        connectingToCluster.awsSecretAccessKey,
-      );
-      const secretNameKeyId = await zeitClient.ensureSecret(
-        "aws-access-key-id",
-        connectingToCluster.awsAccessKeyId,
-      );
-      const secretNameSecretArn = await zeitClient.ensureSecret(
-        "aws-access-key-id",
-        connectingToCluster.secretArn,
-      );
-      const secretNameClusterName = await zeitClient.ensureSecret(
-        "aws-access-key-id",
-        connectingToCluster.clusterName,
-      );
+      const [
+        secretNameSecret,
+        secretNameKeyId,
+        secretNameSecretArn,
+        secretNameClusterName,
+        secretNameClusterARN,
+        secretNameRegion,
+      ] = await Promise.all([
+        zeitClient.ensureSecret(
+          "aurora-secret-access-key",
+          connectingToCluster.awsSecretAccessKey,
+        ),
+        zeitClient.ensureSecret(
+          "aurora-access-key-id",
+          connectingToCluster.awsAccessKeyId,
+        ),
+        zeitClient.ensureSecret(
+          "aurora-secret-arn",
+          connectingToCluster.secretArn,
+        ),
+        zeitClient.ensureSecret(
+          "aurora-cluster-name",
+          connectingToCluster.clusterName,
+        ),
+        zeitClient.ensureSecret(
+          "aurora-cluster-arn",
+          connectingToCluster.clusterArn,
+        ),
+        zeitClient.ensureSecret("aurora-region", connectingToCluster.region),
+      ]);
       await Promise.all([
         zeitClient.upsertEnv(
           projectId,
-          "AWS_SECRET_ACCESS_KEY",
+          "AURORA_SECRET_ACCESS_KEY",
           secretNameSecret,
         ),
-        zeitClient.upsertEnv(projectId, "AWS_ACCESS_KEY_ID", secretNameKeyId),
-        zeitClient.upsertEnv(projectId, "SECRET_ARN", secretNameSecretArn),
-        zeitClient.upsertEnv(projectId, "CLUSTER_NAME", secretNameClusterName),
+        zeitClient.upsertEnv(
+          projectId,
+          "AURORA_ACCESS_KEY_ID",
+          secretNameKeyId,
+        ),
+        zeitClient.upsertEnv(
+          projectId,
+          "AURORA_SECRET_ARN",
+          secretNameSecretArn,
+        ),
+        zeitClient.upsertEnv(
+          projectId,
+          "AURORA_CLUSTER_NAME",
+          secretNameClusterName,
+        ),
+        zeitClient.upsertEnv(
+          projectId,
+          "AURORA_CLUSTER_ARN",
+          secretNameClusterName,
+        ),
+        zeitClient.upsertEnv(projectId, "AURORA_REGION", secretNameRegion),
       ]);
       await zeitClient.setMetadata(metadata);
     }
-  }
-  if (!metadata.setup || action === Actions.setupView) {
-    return setupView(viewInfo, !!metadata.setup);
   }
   return dashboardView(viewInfo);
 }

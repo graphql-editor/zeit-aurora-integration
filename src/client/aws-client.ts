@@ -1,6 +1,6 @@
 import AWSSDK, { RDSDataService, SecretsManager } from "aws-sdk";
 import uuid from "uuid";
-import { ClusterConfig } from "../models";
+import { ClusterConfig, NewClusterConfig } from "../models";
 
 export interface GlobalConfig {
   awsAccessKeyId: string;
@@ -190,7 +190,7 @@ export default class AwsClient {
     });
   }
 
-  public async prepareCluster(cfg?: ClusterConfig) {
+  public async prepareCluster(cfg?: ClusterConfig): Promise<NewClusterConfig> {
     const {
       engine = "aurora",
       region = "us-east-1",
