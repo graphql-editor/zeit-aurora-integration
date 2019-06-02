@@ -58,6 +58,8 @@ export interface AWS {
   SecretsManager: AWSSDK.SecretsManager;
 }
 
+const defaultRegion = "us-east-1";
+
 function randomZeitClusterName(): string {
   return "zeit-" + uuid.v4();
 }
@@ -86,7 +88,7 @@ export default class AwsClient {
   public async prepareCluster(cfg?: ClusterConfig): Promise<NewClusterConfig> {
     const {
       engine = "aurora",
-      region = "us-east-1",
+      region = defaultRegion,
       engineMode = "serverless",
       clusterName = randomZeitClusterName(),
     } = cfg ? cfg : {};
@@ -124,7 +126,7 @@ export default class AwsClient {
   }
 
   public removeCluster(cfg: RemoveClusterConfig) {
-    const { region = "us-east-1", finalSnapshot = false, clusterName } = cfg;
+    const { region = defaultRegion, finalSnapshot = false, clusterName } = cfg;
     const deleteClusterParams: AWSSDK.RDS.DeleteDBClusterMessage = {
       DBClusterIdentifier: clusterName,
       SkipFinalSnapshot: !finalSnapshot,
@@ -203,20 +205,20 @@ export default class AwsClient {
     return this.awsSdk
       ? this.awsSdk.RDS
       : new AWSSDK.RDS({
-          accessKeyId: this.cfg.awsAccessKeyId,
-          region,
-          secretAccessKey: this.cfg.awsSecretAccessKey,
-        });
+        accessKeyId: this.cfg.awsAccessKeyId,
+        region,
+        secretAccessKey: this.cfg.awsSecretAccessKey,
+      });
   }
 
   private secretsManager(region: string): AWSSDK.SecretsManager {
     return this.awsSdk
       ? this.awsSdk.SecretsManager
       : new AWSSDK.SecretsManager({
-          accessKeyId: this.cfg.awsAccessKeyId,
-          region,
-          secretAccessKey: this.cfg.awsSecretAccessKey,
-        });
+        accessKeyId: this.cfg.awsAccessKeyId,
+        region,
+        secretAccessKey: this.cfg.awsSecretAccessKey,
+      });
   }
 
   private createCluster(
