@@ -40,6 +40,7 @@ export interface NewClusterConfig {
    * @memberof NewClusterConfig
    */
   clusterName: string;
+  clusterArn: string;
   secretArn: string;
   region: string;
 }

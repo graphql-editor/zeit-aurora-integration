@@ -57,14 +57,15 @@ export const dashboardView = async (viewInfo: ViewInfo) => {
                         ? projectsConnected[cl.clusterName].includes(
                             currentProject,
                           )
-                          ? `
-                        <Box marginLeft="10px">
-                          <P>Connected to cluster</P>
+                          ? `<Box marginLeft="10px">
+                          <Button action="${Actions.connectCluster}/${
+                              cl.clusterName
+                            }">Link current project</Button>
                         </Box>`
                           : `<Box marginLeft="10px">
-                              <Button action="${
-                                Actions.connectCluster
-                              }">Link current project</Button>
+                              <Button action="${Actions.connectCluster}/${
+                              cl.clusterName
+                            }">Link current project</Button>
                             </Box>`
                         : ""
                     }

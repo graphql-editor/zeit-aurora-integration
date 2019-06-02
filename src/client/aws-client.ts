@@ -1,6 +1,6 @@
 import AWSSDK from "aws-sdk";
 import uuid from "uuid";
-import { ClusterConfig } from "../models";
+import { ClusterConfig, NewClusterConfig } from "../models";
 
 export interface GlobalConfig {
   awsAccessKeyId: string;
@@ -140,24 +140,36 @@ export default class AwsClient {
     };
     const clusterPayload = await this.createCluster(clusterCfg);
     const secretPayload = await this.createSecret(clusterCfg, clusterPayload);
-    const createIAMPayload = await this.createIAM(clusterCfg, clusterPayload, secretPayload);
-    const awsAccessKeyId = createIAMPayload.awsAccessKeyId ? createIAMPayload.awsAccessKeyId : this.cfg.awsAccessKeyId;
-    const awsSecretAccessKey = createIAMPayload.awsSecretAccessKey ? createIAMPayload.awsSecretAccessKey : this.cfg.awsSecretAccessKey;
-    return { awsAccessKeyId, awsSecretAccessKey, clusterArn: clusterPayload.clusterArn, clusterName, region, secretArn: secretPayload.secretArn };
+    const createIAMPayload = await this.createIAM(
+      clusterCfg,
+      clusterPayload,
+      secretPayload,
+    );
+    const awsAccessKeyId = createIAMPayload.awsAccessKeyId
+      ? createIAMPayload.awsAccessKeyId
+      : this.cfg.awsAccessKeyId;
+    const awsSecretAccessKey = createIAMPayload.awsSecretAccessKey
+      ? createIAMPayload.awsSecretAccessKey
+      : this.cfg.awsSecretAccessKey;
+    return {
+      awsAccessKeyId,
+      awsSecretAccessKey,
+      clusterArn: clusterPayload.clusterArn,
+      clusterName,
+      region,
+      secretArn: secretPayload.secretArn,
+    };
   }
 
   public removeCluster(cfg: RemoveClusterConfig) {
-    const {
-      region = "us-east-1",
-      finalSnapshot = false,
-      clusterName,
-    } = cfg;
+    const { region = "us-east-1", finalSnapshot = false, clusterName } = cfg;
     const deleteClusterParams: AWSSDK.RDS.DeleteDBClusterMessage = {
       DBClusterIdentifier: clusterName,
       SkipFinalSnapshot: !finalSnapshot,
     };
     if (!deleteClusterParams.SkipFinalSnapshot) {
-      deleteClusterParams.FinalDBSnapshotIdentifier = "snapshot-" + uuid.v4() + "-cluster-" + clusterName;
+      deleteClusterParams.FinalDBSnapshotIdentifier =
+        "snapshot-" + uuid.v4() + "-cluster-" + clusterName;
     }
     const deleteSecretParams: AWSSDK.SecretsManager.DeleteSecretRequest = {
       RecoveryWindowInDays: 7,
@@ -173,15 +185,18 @@ export default class AwsClient {
         }
         resolved("cluster " + clusterName + " deleted");
       });
-    }).then((v) => new Promise((resolved, rejected) => {
-      secretsManager.deleteSecret(deleteSecretParams, (err) => {
-        if (err) {
-          rejected(err);
-          return;
-        }
-        resolved(v);
-      });
-    }));
+    }).then(
+      (v) =>
+        new Promise((resolved, rejected) => {
+          secretsManager.deleteSecret(deleteSecretParams, (err) => {
+            if (err) {
+              rejected(err);
+              return;
+            }
+            resolved(v);
+          });
+        }),
+    );
   }
 
   private rds(region: string): AWSSDK.RDS {
@@ -294,7 +309,11 @@ export default class AwsClient {
     });
   }
 
-  private createIAM(cfg: ClusterConfig, clusterPayload: CreateClusterPayload, secretPayload: CreateSecretPayload): Promise<CreateIAMPayload> {
+  private createIAM(
+    cfg: ClusterConfig,
+    clusterPayload: CreateClusterPayload,
+    secretPayload: CreateSecretPayload,
+  ): Promise<CreateIAMPayload> {
     // TODO: For each deployment create IAM service user with restricted ACL
     // user should only be allowed to access secrets
     return new Promise((resolved) => {
