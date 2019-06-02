@@ -33,12 +33,10 @@ async function getContent(options: HandlerOptions) {
   if (!metadata.setup || action === Actions.setupView) {
     return setupView(viewInfo, !!metadata.setup);
   }
+  const awsClient = new AwsClient({
+    ...metadata.setup!,
+  });
   if (action === Actions.addCluster) {
-    // Call AWS add cluster
-    const awsClient = new AwsClient({
-      ...metadata.setup!,
-    });
-    console.log(awsClient);
     const cluster = await awsClient.prepareCluster();
     metadata.clusters = metadata.clusters || [];
     metadata.clusters.push(cluster);
@@ -50,22 +48,26 @@ async function getContent(options: HandlerOptions) {
     if (action.startsWith(Actions.removeClusterView)) {
       return sureDeleteView(viewInfo, action.split("/")[1]);
     }
-    // Call AWS remove cluster
     const clusterName = action.split("/")[1];
+    const removedCluster = metadata.clusters!.find(
+      (cl) => cl.clusterName === clusterName,
+    );
     metadata.clusters = metadata.clusters!.filter(
       (cl) => cl.clusterName !== clusterName,
     );
+    const cluster = await awsClient.removeCluster({
+      clusterName,
+      region: removedCluster!.region,
+    });
     delete metadata.projectsConnected![clusterName];
     await zeitClient.setMetadata(metadata);
   }
   if (action.startsWith(Actions.detailsClusterView)) {
-    // Call AWS remove cluster
     const clusterName = action.split("/")[1];
     return detailsView(viewInfo, clusterName);
   }
   if (action.startsWith(Actions.disconnectCluster)) {
     const clusterName = action.split("/")[1];
-    const projectId = payload.projectId;
     metadata.projectsConnected![clusterName] = [];
     await zeitClient.setMetadata(metadata);
   }
@@ -131,7 +133,7 @@ async function getContent(options: HandlerOptions) {
         zeitClient.upsertEnv(
           projectId,
           "AURORA_CLUSTER_ARN",
-          secretNameClusterName,
+          secretNameClusterARN,
         ),
         zeitClient.upsertEnv(projectId, "AURORA_REGION", secretNameRegion),
       ]);

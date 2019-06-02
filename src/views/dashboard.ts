@@ -12,7 +12,7 @@ export const dashboardView = async (viewInfo: ViewInfo) => {
           <Fieldset>
             <FsContent>
               <FsTitle>AWS Aurora Dashboard</FsTitle>
-              <FsSubtitle>Manage your Aurora clusters</FsSubtitle>
+              <FsSubtitle>Manage your Aurora clusters. Creation takes a minute or two so please wait for AWS do their thing, go grab a coffee?</FsSubtitle>
             </FsContent>
             <FsFooter>
               <Box marginRight="10px">
@@ -60,7 +60,7 @@ export const dashboardView = async (viewInfo: ViewInfo) => {
                           ? `<Box marginLeft="10px">
                           <Button action="${Actions.connectCluster}/${
                               cl.clusterName
-                            }">Link current project</Button>
+                            }">Update configuration</Button>
                         </Box>`
                           : `<Box marginLeft="10px">
                               <Button action="${Actions.connectCluster}/${

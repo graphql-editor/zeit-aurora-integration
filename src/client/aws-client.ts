@@ -83,45 +83,7 @@ export default class AwsClient {
     this.awsSdk = awsSdk;
   }
 
-  private async waitFor(rds: AWS.RDS, payload: CreateClusterPayload) {
-    for (let i = 0; i < 30; i++) {
-      try {
-        await new Promise((resolved, rejected) => {
-          rds.describeDBClusters(
-            {
-              DBClusterIdentifier: payload.clusterName,
-            },
-            (err, data) => {
-              if (err) {
-                rejected(err);
-                return;
-              }
-              if (!data.DBClusters || data.DBClusters.length !== 1) {
-                rejected(new Error("cluster not found"));
-              }
-              const dbClusters = data.DBClusters!;
-              if (dbClusters[0].Status === "creating") {
-                rejected(new Error("not ready"));
-                return;
-              }
-              resolved("ok");
-            },
-          );
-        });
-        return;
-      } catch (e) {
-        if (e.message === "cluster not found") {
-          throw e;
-        }
-      }
-      await new Promise((resolved) =>
-        setTimeout(() => resolved("ok"), 30 * 1000),
-      );
-    }
-    throw new Error("timed out");
-  }
-
-  public async prepareCluster(cfg?: ClusterConfig) {
+  public async prepareCluster(cfg?: ClusterConfig): Promise<NewClusterConfig> {
     const {
       engine = "aurora",
       region = "us-east-1",
@@ -199,24 +161,62 @@ export default class AwsClient {
     );
   }
 
+  private async waitFor(rds: AWS.RDS, payload: CreateClusterPayload) {
+    for (let i = 0; i < 30; i++) {
+      try {
+        await new Promise((resolved, rejected) => {
+          rds.describeDBClusters(
+            {
+              DBClusterIdentifier: payload.clusterName,
+            },
+            (err, data) => {
+              if (err) {
+                rejected(err);
+                return;
+              }
+              if (!data.DBClusters || data.DBClusters.length !== 1) {
+                rejected(new Error("cluster not found"));
+              }
+              const dbClusters = data.DBClusters!;
+              if (dbClusters[0].Status === "creating") {
+                rejected(new Error("not ready"));
+                return;
+              }
+              resolved("ok");
+            },
+          );
+        });
+        return;
+      } catch (e) {
+        if (e.message === "cluster not found") {
+          throw e;
+        }
+      }
+      await new Promise((resolved) =>
+        setTimeout(() => resolved("ok"), 30 * 1000),
+      );
+    }
+    throw new Error("timed out");
+  }
+
   private rds(region: string): AWSSDK.RDS {
     return this.awsSdk
       ? this.awsSdk.RDS
       : new AWSSDK.RDS({
-        accessKeyId: this.cfg.awsAccessKeyId,
-        region,
-        secretAccessKey: this.cfg.awsSecretAccessKey,
-      });
+          accessKeyId: this.cfg.awsAccessKeyId,
+          region,
+          secretAccessKey: this.cfg.awsSecretAccessKey,
+        });
   }
 
   private secretsManager(region: string): AWSSDK.SecretsManager {
     return this.awsSdk
       ? this.awsSdk.SecretsManager
       : new AWSSDK.SecretsManager({
-        accessKeyId: this.cfg.awsAccessKeyId,
-        region,
-        secretAccessKey: this.cfg.awsSecretAccessKey,
-      });
+          accessKeyId: this.cfg.awsAccessKeyId,
+          region,
+          secretAccessKey: this.cfg.awsSecretAccessKey,
+        });
   }
 
   private createCluster(
@@ -237,7 +237,10 @@ export default class AwsClient {
             rejected(err);
             return;
           }
-          const dbcluster = data.DBCluster as { DBClusterArn: string, Endpoint: string };
+          const dbcluster = data.DBCluster as {
+            DBClusterArn: string;
+            Endpoint: string;
+          };
           resolved({
             clusterArn: dbcluster.DBClusterArn,
             clusterEndpoint: dbcluster.Endpoint,

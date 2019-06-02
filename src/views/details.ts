@@ -9,7 +9,7 @@ export const detailsView = async (viewInfo: ViewInfo, projectName: string) => {
           <Fieldset>
             <FsContent>
               <FsTitle>${projectName}</FsTitle>
-              <FsSubtitle>Disconnect this cluster from projects or remove it from AWS</FsSubtitle>
+              <FsSubtitle>Remove cluster from AWS and see connected projects</FsSubtitle>
             </FsContent>
             <FsFooter>
                 <Box marginRight="10px">
@@ -34,11 +34,6 @@ export const detailsView = async (viewInfo: ViewInfo, projectName: string) => {
                   <Box display="flex" alignItems="center" padding="10px" border-bottom="1px solid #ddd">
                     <Box>
                     ${p}
-                    </Box>
-                    <Box marginLeft="auto">
-                      <Button action="${
-                        Actions.disconnectCluster
-                      }/${p}">Disconnect</Button>
                     </Box>
                   </Box>
                 `,
