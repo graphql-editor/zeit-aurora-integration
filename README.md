@@ -1,10 +1,17 @@
+![](./gfx/zeit-aurora-feature-integration.jpg)
+
 # Zeit now aurora integration
 
-This is zeit.now integration for Aurora Data Http API
+This is zeit.now integration for Aurora Data Http API. Create Serverless SQL in seconds
 
 ## How to use it
 
-Create project with Zeit.
+1. Add AWS Aurora - Serverless SQL integration. 
+2. Setup with your AWS Account
+3. Add new cluster
+4. Link the cluster to the project
+
+After that new env variables are added to your zeit project
 
 ### Env variables
 
@@ -57,11 +64,12 @@ export default micro(async (req, res) => {
 
 ## To be done
 
-- [x] Setup with AWS keus
+- [x] Setup with AWS keys
 - [x] Add Aurora Cluster
 - [x] Remove Aurora Cluster
 - [x] Connect Aurora Cluster to project
 - [x] Autogenerate cluster name
+- [ ] Provide more examples
 - [ ] Disconnect clusters from project
 - [ ] Provide cluster with name and description
 - [ ] Implement separate IAM Accounts for project runners
