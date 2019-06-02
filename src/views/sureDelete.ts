@@ -1,5 +1,5 @@
-import { Actions } from "actions";
-import { MetadataZeit, SetupVariables, ViewInfo } from "../models";
+import { Actions } from "../actions";
+import { ViewInfo } from "../models";
 
 export const sureDeleteView = async (
   viewInfo: ViewInfo,

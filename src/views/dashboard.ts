@@ -1,5 +1,5 @@
-import { Actions } from "actions";
-import { MetadataZeit, SetupVariables, ViewInfo } from "../models";
+import { Actions } from "../actions";
+import { MetadataZeit, ViewInfo } from "../models";
 
 export const dashboardView = async (viewInfo: ViewInfo) => {
   const {
@@ -23,7 +23,9 @@ export const dashboardView = async (viewInfo: ViewInfo) => {
               </Box>
             </FsFooter>
           </Fieldset>
-          <Fieldset>
+          ${
+            clusters.length > 0
+              ? ` <Fieldset>
             <FsContent>
               <FsTitle>Connect project to cluster</FsTitle>
               <FsSubtitle>Select a project to link it to one of your clusters - to unlink enter project details</FsSubtitle>
@@ -33,7 +35,9 @@ export const dashboardView = async (viewInfo: ViewInfo) => {
                 <ProjectSwitcher />
               </Box>
             </FsFooter>
-          </Fieldset>
+          </Fieldset>`
+              : ``
+          }
           <Fieldset>
             <FsContent>
               <FsTitle>Clusters connected to this team</FsTitle>

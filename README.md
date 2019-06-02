@@ -2,7 +2,7 @@
 
 # Zeit now aurora integration
 
-This is zeit.now integration for Aurora Data Http API. Create Serverless SQL in seconds
+This is (https://zeit.co)[zeit.now] integration for (https://aws.amazon.com/rds/aurora/)[AWS Aurora] Data Http API. Create Serverless SQL in minutes
 
 ## How to use it
 
@@ -61,6 +61,8 @@ export default micro(async (req, res) => {
 });
 
 ```
+
+You can run this sample code in your zeit instance
 
 ## To be done
 

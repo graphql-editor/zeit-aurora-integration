@@ -16,7 +16,7 @@ async function getContent(options: HandlerOptions) {
 
   const metadata: MetadataZeit = await zeitClient.getMetadata();
   const viewInfo: ViewInfo = { metadata, zeitClient, payload };
-  console.log("received action", action, payload);
+
   if (action === Actions.setup) {
     const {
       awsAccessKeyId,

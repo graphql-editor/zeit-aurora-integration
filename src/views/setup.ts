@@ -1,8 +1,8 @@
-import { Actions } from "actions";
+import { Actions } from "../actions";
 import { MetadataZeit, SetupVariables, ViewInfo } from "../models";
 
 export const setupView = async (viewInfo: ViewInfo, allowBack?: boolean) => {
-  const { payload, metadata, zeitClient } = viewInfo;
+  const { metadata } = viewInfo;
   const error = undefined;
   const setup: MetadataZeit["setup"] = metadata.setup || {};
   const awsAccountCreationLink = "https://aws.amazon.com/account/";
@@ -21,16 +21,17 @@ export const setupView = async (viewInfo: ViewInfo, allowBack?: boolean) => {
 				<FsContent>
 					<FsTitle>Your AWS Access Key</FsTitle>
 					<FsSubtitle>This is your AWS main access key. Don't worry this integration will create its own policies and doesnt store it.</FsSubtitle>
-					<Input name="${SetupVariables.awsAccessKeyId}" value="${setup!.awsAccessKeyId ||
-    ""}"/>
+					<Input type="password" name="${SetupVariables.awsAccessKeyId}" value="${setup!
+    .awsAccessKeyId || ""}"/>
 				</FsContent>
 			</Fieldset>
 			<Fieldset>
 				<FsContent>
 					<FsTitle>Your AWS Secret Key</FsTitle>
 					<FsSubtitle>This is your AWS main secret key. Don't worry this integration will create its own policies and doesnt store it.</FsSubtitle>
-					<Input name="${SetupVariables.awsSecretAccessKey}" value="${setup!
-    .awsSecretAccessKey || ""}"/>
+					<Input type="password" name="${
+            SetupVariables.awsSecretAccessKey
+          }" value="${setup!.awsSecretAccessKey || ""}"/>
 				</FsContent>
 			</Fieldset>
 			<Fieldset>

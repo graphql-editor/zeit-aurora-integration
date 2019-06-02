@@ -2,7 +2,7 @@
   "name": "zeit-aurora-integration",
   "version": "1.0.0",
   "description": "Integration of AWS Aurora with Zeit Now",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -15,7 +15,7 @@
     "aurora",
     "aws"
   ],
-  "author": "Aexol <aexol@aexol.com> (http://aexol.com)",
+  "author": "Artur Czemiel, Kamil Matysiewicz",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/slothking-online/zeit-aurora-integration/issues"

@@ -1,5 +1,5 @@
-import { Actions } from "actions";
-import { MetadataZeit, SetupVariables, ViewInfo } from "../models";
+import { Actions } from "../actions";
+import { MetadataZeit, ViewInfo } from "../models";
 
 export const detailsView = async (viewInfo: ViewInfo, projectName: string) => {
   const { projectsConnected } = viewInfo.metadata as MetadataZeit;
